@@ -53,7 +53,7 @@ const UserController = {
 
   login: async (req, res) => {
     const { email, password } = req.body;
-    console.log("LOGIN: ", email, password)
+    console.log('LOGIN: ', email, password);
     if (!email || !password) {
       return res.status(400).json({
         error: 'email and (or) password required',
@@ -76,13 +76,14 @@ const UserController = {
           error: 'Wrong email or password provided ... please try again',
         });
       }
-
       //token generating
       const token = jwt.sign(
-        { email: isUserExist.email, id: isUserExist.id },
+        { email: isUserExist.email, userId: isUserExist.id },
         process.env.SECRET_KEY
       );
-      res.status(200).cookie('token', token).json(isUserExist);
+      console.log('TOKEN: ', token);
+      //  res.status(200).cookie('token', token).json(isUserExist);
+      res.status(201).json({ token });
     } catch (error) {
       console.log('ERROR NEW USER LOGIN: ', error);
       res.status(500).json({
@@ -91,11 +92,39 @@ const UserController = {
     }
   },
   getUserById: async (req, res) => {
-    const { id } = req.params;
-    res.status(201).json({
-      message: 'getUserById',
-      id: id,
-    });
+    // stands for searching user by ID. For example I can find any user when I am login
+    const { id } = req.params; // id of user which we searching for
+    const { userId } = req.user.userId; // my id
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id },
+        include: {
+          followers: true, // we also need all followers and folloging of that user
+          following: true,
+        },
+      });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const isFollowing = await prisma.follows.findFirst({
+        // check if I as person which loge=in is follower of searching user
+        where: {
+          AND: [
+            { followerId: userId }, // if I is follower of user which we searching for
+            { followingId: id }, // id if user which we looking for
+          ],
+        },
+      });
+
+      res.status(200).json({
+        ...user, isFollowing: Boolean(isFollowing)// we spread info user we searching for boolean if I am his follower
+
+      });
+    } catch (error) {
+      console.log('Error get user by ID: ', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
   },
   updateUser: async (req, res) => {
     const { id } = req.params;
@@ -106,7 +135,7 @@ const UserController = {
   },
   currentUser: async (req, res) => {
     res.status(200).json({
-      message: 'current user - Sergey',
+      message: 'current user - Ekaterina',
     });
   },
 };
