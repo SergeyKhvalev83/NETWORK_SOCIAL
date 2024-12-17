@@ -22,7 +22,7 @@ const uploads = multer({
 router.post('/register', UserController.register);
 router.post('/login', UserController.login);
 router.get('/users/:id',authenticateToken, UserController.getUserById);
-router.get('/current', authenticateToken, UserController.currentUser);
 router.put('/users/:id', authenticateToken, UserController.updateUser);
+router.get('/current', authenticateToken, UserController.currentUser);
 
 module.exports = router;
